@@ -1,10 +1,10 @@
-<script setup>
-import { ref, onMounted, onUnmounted, computed } from '../main.js'
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 
-const videoRef = ref(null)
-const canvasRef = ref(null)
-const asciiRef = ref(null)
-const fileInput = ref(null)
+const videoRef = ref<HTMLVideoElement | null>(null)
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+const asciiRef = ref<HTMLPreElement | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 const isPlaying = ref(false)
 const isLoading = ref(false)
 const fontSize = ref(8)
@@ -14,14 +14,14 @@ const contrast = ref(1)
 const charSets = {
   detailed: '@#W$9876543210?!abc;:+=-,._ ',
   simple: '@%#*+=-:. ',
-  blocks: '█▓▒░ '
+  blocks: '█▓▒░ ',
 }
-const selectedCharSet = ref('detailed')
+const selectedCharSet = ref<keyof typeof charSets>('detailed')
 
 // 计算当前使用的字符集
 const ASCII_CHARS = computed(() => charSets[selectedCharSet.value])
 const ASCII_WIDTH = ref(100)
-const colorMode = ref('green')
+const colorMode = ref<'green' | 'original' | 'grayscale'>('green')
 const colorIntensity = ref(1)
 
 // 添加新的状态控制
@@ -49,16 +49,16 @@ const handleLoadedMetadata = () => {
 }
 
 // 添加进度条控制
-const handleSeek = (event) => {
-  const input = event.target
+const handleSeek = (event: Event) => {
+  const input = event.target as HTMLInputElement
   if (videoRef.value) {
     videoRef.value.currentTime = Number(input.value)
   }
 }
 
 // 添加音量控制
-const handleVolumeChange = (event) => {
-  const input = event.target
+const handleVolumeChange = (event: Event) => {
+  const input = event.target as HTMLInputElement
   if (videoRef.value) {
     videoRef.value.volume = Number(input.value)
     volume.value = Number(input.value)
@@ -66,8 +66,8 @@ const handleVolumeChange = (event) => {
 }
 
 // 添加播放速度控制
-const handlePlaybackRateChange = (event) => {
-  const select = event.target
+const handlePlaybackRateChange = (event: Event) => {
+  const select = event.target as HTMLSelectElement
   if (videoRef.value) {
     videoRef.value.playbackRate = Number(select.value)
     playbackRate.value = Number(select.value)
@@ -75,23 +75,23 @@ const handlePlaybackRateChange = (event) => {
 }
 
 // 格式化时间显示
-const formatTime = (time) => {
+const formatTime = (time: number) => {
   const minutes = Math.floor(time / 60)
   const seconds = Math.floor(time % 60)
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
-const handleFileChange = async (event) => {
-  const input = event.target
+const handleFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
   if (input.files && input.files[0]) {
     isLoading.value = true
     const file = input.files[0]
     const videoUrl = URL.createObjectURL(file)
-    
+
     if (videoRef.value) {
       videoRef.value.src = videoUrl
       await new Promise((resolve) => {
-        videoRef.value.onloadeddata = resolve
+        videoRef.value!.onloadeddata = resolve
       })
       try {
         await videoRef.value.play()
@@ -108,7 +108,7 @@ const handleFileChange = async (event) => {
 
 const togglePlay = async () => {
   if (!videoRef.value) return
-  
+
   if (isPlaying.value) {
     videoRef.value.pause()
     isPlaying.value = false
@@ -123,14 +123,14 @@ const togglePlay = async () => {
   }
 }
 
-const getAsciiChar = (brightness) => {
+const getAsciiChar = (brightness: number): string => {
   const adjustedBrightness = Math.pow(brightness, contrast.value)
   const chars = ASCII_CHARS.value
   const charIndex = Math.floor(adjustedBrightness * (chars.length - 1))
   return chars[charIndex]
 }
 
-const getPixelColor = (r, g, b) => {
+const getPixelColor = (r: number, g: number, b: number): string => {
   switch (colorMode.value) {
     case 'original':
       const intensity = colorIntensity.value
@@ -154,39 +154,39 @@ const processFrame = () => {
   // 添加帧率控制
   const now = performance.now()
   const elapsed = now - lastFrameTime
-  
+
   if (elapsed < frameInterval.value) {
     animationFrameId = requestAnimationFrame(processFrame)
     return
   }
-  
+
   lastFrameTime = now
-  
+
   const ctx = canvasRef.value.getContext('2d')
   if (!ctx) return
 
   const video = videoRef.value
   const canvas = canvasRef.value
-  
+
   if (video.readyState < 2) {
     animationFrameId = requestAnimationFrame(processFrame)
     return
   }
-  
+
   const ratio = video.videoHeight / video.videoWidth
   const asciiWidth = ASCII_WIDTH.value
   const asciiHeight = Math.floor(asciiWidth * ratio * 0.5)
 
   canvas.width = asciiWidth
   canvas.height = asciiHeight
-  
+
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
   const pixels = imageData.data
 
   let coloredAsciiArt = document.createElement('div')
   coloredAsciiArt.style.lineHeight = fontSize.value + 'px'
-  
+
   for (let y = 0; y < canvas.height; y++) {
     const lineDiv = document.createElement('div')
     lineDiv.style.height = fontSize.value + 'px'
@@ -196,7 +196,7 @@ const processFrame = () => {
       const g = pixels[offset + 1]
       const b = pixels[offset + 2]
       const brightness = (r + g + b) / (3 * 255)
-      
+
       const char = getAsciiChar(brightness)
       const span = document.createElement('span')
       span.textContent = char
@@ -210,11 +210,11 @@ const processFrame = () => {
     asciiRef.value.innerHTML = ''
     asciiRef.value.appendChild(coloredAsciiArt)
   }
-  
+
   animationFrameId = requestAnimationFrame(processFrame)
 }
 
-let animationFrameId = null
+let animationFrameId: number | null = null
 
 onMounted(() => {
   // 移除之前的事件监听器，因为我们现在在handleFileChange中直接处理播放
@@ -235,35 +235,35 @@ const frameInterval = computed(() => 1000 / FPS.value)
 let lastFrameTime = 0
 
 // 添加导出单帧的函数
-const renderFrameToText = async (time) => {
+const renderFrameToText = async (time: number) => {
   if (!videoRef.value || !canvasRef.value) return ''
-  
+
   // 设置视频时间
   videoRef.value.currentTime = time
-  
+
   // 等待视频更新到指定时间
-  await new Promise((resolve) => {
+  await new Promise<void>((resolve) => {
     const onSeeked = () => {
-      videoRef.value.removeEventListener('seeked', onSeeked)
+      videoRef.value?.removeEventListener('seeked', onSeeked)
       resolve()
     }
-    videoRef.value.addEventListener('seeked', onSeeked)
+    videoRef.value?.addEventListener('seeked', onSeeked)
   })
-  
+
   const ctx = canvasRef.value.getContext('2d')
   if (!ctx) return ''
-  
+
   const ratio = videoRef.value.videoHeight / videoRef.value.videoWidth
   const asciiWidth = ASCII_WIDTH.value
   const asciiHeight = Math.floor(asciiWidth * ratio * 0.5)
-  
+
   canvasRef.value.width = asciiWidth
   canvasRef.value.height = asciiHeight
-  
+
   ctx.drawImage(videoRef.value, 0, 0, asciiWidth, asciiHeight)
   const imageData = ctx.getImageData(0, 0, asciiWidth, asciiHeight)
   const pixels = imageData.data
-  
+
   let frameText = ''
   for (let y = 0; y < asciiHeight; y++) {
     for (let x = 0; x < asciiWidth; x++) {
@@ -276,31 +276,31 @@ const renderFrameToText = async (time) => {
     }
     frameText += '\n'
   }
-  
+
   return frameText
 }
 
 // 添加导出所有帧的函数
 const exportAllFrames = async () => {
   if (!videoRef.value || isExporting.value) return
-  
+
   const wasPlaying = isPlaying.value
   if (wasPlaying) {
     await togglePlay()
   }
-  
+
   try {
     isExporting.value = true
     exportProgress.value = 0
-    
+
     // 计算总帧数
     const fps = 10 // 每秒导出10帧
     const duration = videoRef.value.duration
     const totalFrames = Math.floor(duration * fps)
     const timeIncrement = duration / totalFrames
-    
+
     let allFramesText = ''
-    
+
     // 添加视频信息头
     allFramesText += `ASCII Video Export\n`
     allFramesText += `Resolution: ${ASCII_WIDTH.value}x${Math.floor(ASCII_WIDTH.value * 0.5)}\n`
@@ -308,21 +308,21 @@ const exportAllFrames = async () => {
     allFramesText += `Frames: ${totalFrames}\n`
     allFramesText += `Character Set: ${selectedCharSet.value}\n`
     allFramesText += `=`.repeat(ASCII_WIDTH.value) + '\n\n'
-    
+
     // 导每一帧
     for (let i = 0; i < totalFrames; i++) {
       const time = i * timeIncrement
       const frameText = await renderFrameToText(time)
-      
+
       // 添加帧分隔符和时间戳
       allFramesText += `Frame ${i + 1} - ${formatTime(time)}\n`
       allFramesText += frameText
       allFramesText += `=`.repeat(ASCII_WIDTH.value) + '\n\n'
-      
+
       // 更新进度
       exportProgress.value = ((i + 1) / totalFrames) * 100
     }
-    
+
     // 创建并下载文本文件
     const blob = new Blob([allFramesText], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
@@ -331,14 +331,14 @@ const exportAllFrames = async () => {
     a.download = `ascii-video-frames-${Date.now()}.txt`
     a.click()
     URL.revokeObjectURL(url)
-    
+
   } catch (error) {
     console.error('导出失败:', error)
     alert('导出失败，请重试')
   } finally {
     isExporting.value = false
     exportProgress.value = 0
-    
+
     // 恢复播放状态
     if (wasPlaying) {
       await togglePlay()
@@ -347,31 +347,33 @@ const exportAllFrames = async () => {
 }
 
 // 添加拖拽处理
-const handleDragOver = (event) => {
+const handleDragOver = (event: DragEvent) => {
   event.preventDefault()
-  const label = event.currentTarget
+  const label = event.currentTarget as HTMLElement
   label.classList.add('drag-over')
 }
 
-const handleDragLeave = (event) => {
+const handleDragLeave = (event: DragEvent) => {
   event.preventDefault()
-  const label = event.currentTarget
+  const label = event.currentTarget as HTMLElement
   label.classList.remove('drag-over')
 }
 
-const handleDrop = async (event) => {
+const handleDrop = async (event: DragEvent) => {
   event.preventDefault()
-  const label = event.currentTarget
+  const label = event.currentTarget as HTMLElement
   label.classList.remove('drag-over')
-  
+
   if (event.dataTransfer?.files && event.dataTransfer.files[0]) {
     const file = event.dataTransfer.files[0]
     if (file.type.startsWith('video/')) {
       if (fileInput.value) {
+        // 创建新的 FileList 对象
         const dataTransfer = new DataTransfer()
         dataTransfer.items.add(file)
         fileInput.value.files = dataTransfer.files
-        
+
+        // 触发 change 事件
         const changeEvent = new Event('change')
         fileInput.value.dispatchEvent(changeEvent)
       }
@@ -386,11 +388,8 @@ const handleDrop = async (event) => {
   <div class="video-ascii-container">
     <div class="controls">
       <div class="file-input-wrapper">
-        <label for="video-file" class="file-input-label"
-          @dragover="handleDragOver"
-          @dragleave="handleDragLeave"
-          @drop="handleDrop"
-        >
+        <label for="video-file" class="file-input-label" @dragover="handleDragOver" @dragleave="handleDragLeave"
+          @drop="handleDrop">
           <div class="file-input-content">
             <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -402,16 +401,10 @@ const handleDrop = async (event) => {
             </span>
           </div>
         </label>
-        <input
-          ref="fileInput"
-          type="file"
-          id="video-file"
-          accept="video/*"
-          @change="handleFileChange"
-          class="file-input"
-        />
+        <input ref="fileInput" type="file" id="video-file" accept="video/*" @change="handleFileChange"
+          class="file-input" />
       </div>
-      
+
       <div class="settings">
         <div class="setting-item">
           <label>字符集：</label>
@@ -421,41 +414,23 @@ const handleDrop = async (event) => {
             <option value="blocks">方块</option>
           </select>
         </div>
-        
+
         <div class="setting-item">
           <label>字体大小：</label>
-          <input 
-            type="range" 
-            v-model="fontSize" 
-            min="6" 
-            max="12" 
-            step="1"
-          />
+          <input type="range" v-model="fontSize" min="6" max="12" step="1" />
         </div>
-        
+
         <div class="setting-item">
           <label>对比度：</label>
-          <input 
-            type="range" 
-            v-model="contrast" 
-            min="0.5" 
-            max="2" 
-            step="0.1"
-          />
+          <input type="range" v-model="contrast" min="0.5" max="2" step="0.1" />
         </div>
-        
+
         <div class="setting-item">
           <label>分辨率：</label>
-          <input 
-            type="range" 
-            v-model="ASCII_WIDTH" 
-            min="50" 
-            max="200" 
-            step="10"
-          />
+          <input type="range" v-model="ASCII_WIDTH" min="50" max="200" step="10" />
           <span>{{ ASCII_WIDTH }}x{{ Math.floor(ASCII_WIDTH * 0.5) }}</span>
         </div>
-        
+
         <div class="setting-item">
           <label>颜色模式：</label>
           <select v-model="colorMode">
@@ -464,55 +439,31 @@ const handleDrop = async (event) => {
             <option value="grayscale">灰度</option>
           </select>
         </div>
-        
+
         <div class="setting-item">
           <label>颜色强度：</label>
-          <input 
-            type="range" 
-            v-model="colorIntensity" 
-            min="0.5" 
-            max="2" 
-            step="0.1"
-          />
+          <input type="range" v-model="colorIntensity" min="0.5" max="2" step="0.1" />
         </div>
       </div>
-      
-      <button 
-        class="play-button"
-        @click="togglePlay"
-        :disabled="!videoRef?.src"
-      >
+
+      <button class="play-button" @click="togglePlay" :disabled="!videoRef?.src">
         {{ isPlaying ? '暂停' : '播放' }}
       </button>
-      
+
       <!-- 添加视频控制面板 -->
       <div class="video-controls">
         <div class="time-control">
           <span>{{ formatTime(currentTime) }}</span>
-          <input
-            type="range"
-            :min="0"
-            :max="duration"
-            :value="currentTime"
-            @input="handleSeek"
-            class="time-slider"
-          />
+          <input type="range" :min="0" :max="duration" :value="currentTime" @input="handleSeek" class="time-slider" />
           <span>{{ formatTime(duration) }}</span>
         </div>
-        
+
         <div class="playback-controls">
           <div class="setting-item">
             <label>音量：</label>
-            <input
-              type="range"
-              :value="volume"
-              min="0"
-              max="1"
-              step="0.1"
-              @input="handleVolumeChange"
-            />
+            <input type="range" :value="volume" min="0" max="1" step="0.1" @input="handleVolumeChange" />
           </div>
-          
+
           <div class="setting-item">
             <label>播放速度：</label>
             <select :value="playbackRate" @change="handlePlaybackRateChange">
@@ -525,41 +476,25 @@ const handleDrop = async (event) => {
         </div>
       </div>
     </div>
-    
+
     <div class="video-container">
-      <video
-        ref="videoRef"
-        style="display: none"
-        muted
-        loop
-        @timeupdate="handleTimeUpdate"
-        @loadedmetadata="handleLoadedMetadata"
-      ></video>
-      
-      <canvas
-        ref="canvasRef"
-        style="display: none"
-      ></canvas>
-      
+      <video ref="videoRef" style="display: none" muted loop @timeupdate="handleTimeUpdate"
+        @loadedmetadata="handleLoadedMetadata"></video>
+
+      <canvas ref="canvasRef" style="display: none"></canvas>
+
       <div class="ascii-container">
         <div v-if="isLoading" class="loading">加载中...</div>
         <div class="ascii-wrapper">
-          <pre
-            ref="asciiRef"
-            class="ascii-output"
-            :style="{ fontSize: `${fontSize}px`, lineHeight: `${fontSize}px` }"
-          ></pre>
+          <pre ref="asciiRef" class="ascii-output"
+            :style="{ fontSize: `${fontSize}px`, lineHeight: `${fontSize}px` }"></pre>
         </div>
       </div>
     </div>
-    
+
     <!-- 添加导出按钮和进度条 -->
     <div class="export-controls">
-      <button 
-        class="export-button"
-        @click="exportAllFrames"
-        :disabled="!videoRef?.src || isExporting"
-      >
+      <button class="export-button" @click="exportAllFrames" :disabled="!videoRef?.src || isExporting">
         {{ isExporting ? `导出中 ${exportProgress.toFixed(1)}%` : '导出所有帧' }}
       </button>
     </div>
@@ -575,11 +510,9 @@ const handleDrop = async (event) => {
 .controls {
   padding: var(--spacing-6);
   border-radius: var(--radius-lg);
-  background: linear-gradient(
-    to bottom right,
-    var(--bg-secondary),
-    var(--bg-tertiary)
-  );
+  background: linear-gradient(to bottom right,
+      var(--bg-secondary),
+      var(--bg-tertiary));
 }
 
 .settings {
@@ -779,19 +712,19 @@ select:focus {
   .video-ascii-container {
     padding: var(--spacing-2);
   }
-  
+
   .controls {
     padding: var(--spacing-4);
   }
-  
+
   .file-input-label {
     padding: var(--spacing-4);
   }
-  
+
   button {
     padding: var(--spacing-3) var(--spacing-4);
   }
-  
+
   .ascii-output {
     padding: var(--spacing-4);
   }
@@ -821,8 +754,15 @@ select,
 
 /* 添加动画效果 */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .video-ascii-container {
@@ -834,19 +774,19 @@ select,
   .video-ascii-container {
     padding: var(--spacing-2);
   }
-  
+
   .controls {
     padding: var(--spacing-4);
   }
-  
+
   .file-input-label {
     padding: var(--spacing-4);
   }
-  
+
   button {
     padding: var(--spacing-3) var(--spacing-4);
   }
-  
+
   .ascii-output {
     padding: var(--spacing-4);
   }
@@ -1067,17 +1007,17 @@ select:focus {
   .playback-controls {
     grid-template-columns: 1fr;
   }
-  
+
   .time-control {
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
   }
-  
+
   .time-control span {
     text-align: center;
   }
-  
+
   button {
     width: 100%;
     padding: var(--spacing-3) var(--spacing-4);
@@ -1115,7 +1055,7 @@ select:focus {
   overflow: auto;
   background: #000000;
   border: 1px solid var(--border-color);
-  
+
   /* 自定义滚动条颜色 */
   scrollbar-width: thin;
   scrollbar-color: var(--accent-color) #1a1a1a;

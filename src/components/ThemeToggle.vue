@@ -1,5 +1,5 @@
-<script setup>
-import { ref, onMounted, watch } from '../main.js'
+<script setup lang="ts">
+import { ref, onMounted, watch } from 'vue'
 
 const isDark = ref(false)
 
@@ -21,7 +21,7 @@ watch(isDark, (newValue) => {
 })
 
 // 更新主题
-const updateTheme = (dark) => {
+const updateTheme = (dark: boolean) => {
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
 }
 
