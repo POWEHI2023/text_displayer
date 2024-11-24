@@ -1,10 +1,10 @@
-<script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+<script setup>
+import { ref, onMounted, onUnmounted, computed } from '../main.js'
 
-const videoRef = ref<HTMLVideoElement | null>(null)
-const canvasRef = ref<HTMLCanvasElement | null>(null)
-const asciiRef = ref<HTMLPreElement | null>(null)
-const fileInput = ref<HTMLInputElement | null>(null)
+const videoRef = ref(null)
+const canvasRef = ref(null)
+const asciiRef = ref(null)
+const fileInput = ref(null)
 const isPlaying = ref(false)
 const isLoading = ref(false)
 const fontSize = ref(8)
@@ -14,14 +14,14 @@ const contrast = ref(1)
 const charSets = {
   detailed: '@#W$9876543210?!abc;:+=-,._ ',
   simple: '@%#*+=-:. ',
-  blocks: '█▓▒░ ',
+  blocks: '█▓▒░ '
 }
-const selectedCharSet = ref<keyof typeof charSets>('detailed')
+const selectedCharSet = ref('detailed')
 
 // 计算当前使用的字符集
 const ASCII_CHARS = computed(() => charSets[selectedCharSet.value])
 const ASCII_WIDTH = ref(100)
-const colorMode = ref<'green' | 'original' | 'grayscale'>('green')
+const colorMode = ref('green')
 const colorIntensity = ref(1)
 
 // 添加新的状态控制
@@ -49,16 +49,16 @@ const handleLoadedMetadata = () => {
 }
 
 // 添加进度条控制
-const handleSeek = (event: Event) => {
-  const input = event.target as HTMLInputElement
+const handleSeek = (event) => {
+  const input = event.target
   if (videoRef.value) {
     videoRef.value.currentTime = Number(input.value)
   }
 }
 
 // 添加音量控制
-const handleVolumeChange = (event: Event) => {
-  const input = event.target as HTMLInputElement
+const handleVolumeChange = (event) => {
+  const input = event.target
   if (videoRef.value) {
     videoRef.value.volume = Number(input.value)
     volume.value = Number(input.value)
@@ -66,8 +66,8 @@ const handleVolumeChange = (event: Event) => {
 }
 
 // 添加播放速度控制
-const handlePlaybackRateChange = (event: Event) => {
-  const select = event.target as HTMLSelectElement
+const handlePlaybackRateChange = (event) => {
+  const select = event.target
   if (videoRef.value) {
     videoRef.value.playbackRate = Number(select.value)
     playbackRate.value = Number(select.value)
@@ -75,14 +75,14 @@ const handlePlaybackRateChange = (event: Event) => {
 }
 
 // 格式化时间显示
-const formatTime = (time: number) => {
+const formatTime = (time) => {
   const minutes = Math.floor(time / 60)
   const seconds = Math.floor(time % 60)
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
-const handleFileChange = async (event: Event) => {
-  const input = event.target as HTMLInputElement
+const handleFileChange = async (event) => {
+  const input = event.target
   if (input.files && input.files[0]) {
     isLoading.value = true
     const file = input.files[0]
@@ -91,7 +91,7 @@ const handleFileChange = async (event: Event) => {
     if (videoRef.value) {
       videoRef.value.src = videoUrl
       await new Promise((resolve) => {
-        videoRef.value!.onloadeddata = resolve
+        videoRef.value.onloadeddata = resolve
       })
       try {
         await videoRef.value.play()
@@ -123,14 +123,14 @@ const togglePlay = async () => {
   }
 }
 
-const getAsciiChar = (brightness: number): string => {
+const getAsciiChar = (brightness) => {
   const adjustedBrightness = Math.pow(brightness, contrast.value)
   const chars = ASCII_CHARS.value
   const charIndex = Math.floor(adjustedBrightness * (chars.length - 1))
   return chars[charIndex]
 }
 
-const getPixelColor = (r: number, g: number, b: number): string => {
+const getPixelColor = (r, g, b) => {
   switch (colorMode.value) {
     case 'original':
       const intensity = colorIntensity.value
@@ -214,7 +214,7 @@ const processFrame = () => {
   animationFrameId = requestAnimationFrame(processFrame)
 }
 
-let animationFrameId: number | null = null
+let animationFrameId = null
 
 onMounted(() => {
   // 移除之前的事件监听器，因为我们现在在handleFileChange中直接处理播放
@@ -235,19 +235,19 @@ const frameInterval = computed(() => 1000 / FPS.value)
 let lastFrameTime = 0
 
 // 添加导出单帧的函数
-const renderFrameToText = async (time: number) => {
+const renderFrameToText = async (time) => {
   if (!videoRef.value || !canvasRef.value) return ''
   
   // 设置视频时间
   videoRef.value.currentTime = time
   
   // 等待视频更新到指定时间
-  await new Promise<void>((resolve) => {
+  await new Promise((resolve) => {
     const onSeeked = () => {
-      videoRef.value?.removeEventListener('seeked', onSeeked)
+      videoRef.value.removeEventListener('seeked', onSeeked)
       resolve()
     }
-    videoRef.value?.addEventListener('seeked', onSeeked)
+    videoRef.value.addEventListener('seeked', onSeeked)
   })
   
   const ctx = canvasRef.value.getContext('2d')
@@ -347,33 +347,31 @@ const exportAllFrames = async () => {
 }
 
 // 添加拖拽处理
-const handleDragOver = (event: DragEvent) => {
+const handleDragOver = (event) => {
   event.preventDefault()
-  const label = event.currentTarget as HTMLElement
+  const label = event.currentTarget
   label.classList.add('drag-over')
 }
 
-const handleDragLeave = (event: DragEvent) => {
+const handleDragLeave = (event) => {
   event.preventDefault()
-  const label = event.currentTarget as HTMLElement
+  const label = event.currentTarget
   label.classList.remove('drag-over')
 }
 
-const handleDrop = async (event: DragEvent) => {
+const handleDrop = async (event) => {
   event.preventDefault()
-  const label = event.currentTarget as HTMLElement
+  const label = event.currentTarget
   label.classList.remove('drag-over')
   
   if (event.dataTransfer?.files && event.dataTransfer.files[0]) {
     const file = event.dataTransfer.files[0]
     if (file.type.startsWith('video/')) {
       if (fileInput.value) {
-        // 创建新的 FileList 对象
         const dataTransfer = new DataTransfer()
         dataTransfer.items.add(file)
         fileInput.value.files = dataTransfer.files
         
-        // 触发 change 事件
         const changeEvent = new Event('change')
         fileInput.value.dispatchEvent(changeEvent)
       }
